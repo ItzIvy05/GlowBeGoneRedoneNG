@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #ifndef DLLEXPORT
@@ -263,6 +264,20 @@ namespace GlowBeGone {
         LoadConfigFromFile("Data/SKSE/Plugins/GlowBeGoneSSE.toml");
     }
 
+    static bool IsExcludedByPlugin(RE::TESForm* form) {
+        if (!form || g_settings.exclusionList.empty()) {
+            return false;
+        }
+
+        auto* file = form->GetFile(0);
+        if (!file) {
+            return false;
+        }
+
+        auto name = ToLower(std::string(file->GetFilename()));
+        return g_settings.exclusionList.find(name) != g_settings.exclusionList.end();
+    }
+
     static void RemoveShader(RE::EffectSetting* a_effect) noexcept {
         if (!a_effect) {
             return;
@@ -283,14 +298,8 @@ namespace GlowBeGone {
         }
     }
 
-    static void PatchWeaponEnchantments(RE::Actor* actor, RE::FormID weaponID) {
-        if (!actor) {
-            return;
-        }
-
-        auto* form = RE::TESForm::LookupByID(weaponID);
-        auto* weap = form ? form->As<RE::TESObjectWEAP>() : nullptr;
-        if (!weap) {
+    static void PatchWeaponEnchantments(RE::Actor* actor, RE::TESObjectWEAP* weap, RE::FormID weaponID) {
+        if (!actor || !weap) {
             return;
         }
 
@@ -332,9 +341,7 @@ namespace GlowBeGone {
         }
     }
 
-    static void PatchMagicEffect(RE::FormID effectID) {
-        auto* form = RE::TESForm::LookupByID(effectID);
-        auto* effect = form ? form->As<RE::EffectSetting>() : nullptr;
+    static void PatchMagicEffect(RE::EffectSetting* effect) {
         if (!effect) {
             return;
         }
@@ -360,8 +367,17 @@ namespace GlowBeGone {
             }
 
             auto weaponID = static_cast<RE::FormID>(e->baseObject);
-            PatchWeaponEnchantments(actor, weaponID);
+            auto* form = RE::TESForm::LookupByID(weaponID);
+            auto* weap = form ? form->As<RE::TESObjectWEAP>() : nullptr;
+            if (!weap) {
+                return RE::BSEventNotifyControl::kContinue;
+            }
 
+            if (IsExcludedByPlugin(form)) {
+                return RE::BSEventNotifyControl::kContinue;
+            }
+
+            PatchWeaponEnchantments(actor, weap, weaponID);
             return RE::BSEventNotifyControl::kContinue;
         }
     };
@@ -385,8 +401,17 @@ namespace GlowBeGone {
                 return RE::BSEventNotifyControl::kContinue;
             }
 
-            PatchMagicEffect(effectID);
+            auto* form = RE::TESForm::LookupByID(effectID);
+            auto* effect = form ? form->As<RE::EffectSetting>() : nullptr;
+            if (!effect) {
+                return RE::BSEventNotifyControl::kContinue;
+            }
 
+            if (IsExcludedByPlugin(form)) {
+                return RE::BSEventNotifyControl::kContinue;
+            }
+
+            PatchMagicEffect(effect);
             return RE::BSEventNotifyControl::kContinue;
         }
     };

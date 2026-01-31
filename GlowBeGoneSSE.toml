@@ -10,6 +10,7 @@ ExclusionList = [
     "FleshFX.esp",
     "Frostfall.esp",
     "RASS - Visual Effects.esl",
+    "For Honor in Skyrim.esp",        
     "WetandCold.esp",
     # Add your beloved plugin names below and separate by (,)comma, surrounded by (")double quotation marks.
 ]
