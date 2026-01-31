@@ -6,10 +6,50 @@ RemoveWeaponFX = true
 ExclusionList = [
     "Campfire.esm",
     "Dirt and Blood - Dynamic Visuals.esp",
+    "JustBlood.esp",
     "FleshFX.esp",
     "Frostfall.esp",
     "RASS - Visual Effects.esl",
     "WetandCold.esp",
     # Add your beloved plugin names below and separate by (,)comma, surrounded by (")double quotation marks.
-    
 ]
+
+[MagicEffects]
+MagicEffectExclusionList = [
+    "Skyrim.esm:00016B4B",
+    "Skyrim.esm:00016C0F",
+    "Skyrim.esm:00016C3B",
+    "Skyrim.esm:00016C3D",
+    "Skyrim.esm:0001A1EF",
+    "Skyrim.esm:0005D30E",
+    "Skyrim.esm:00065BD6",
+    "Skyrim.esm:0006A154",
+    "Skyrim.esm:0006A156",
+    "Skyrim.esm:00072313",
+    "Skyrim.esm:0007E8E0",
+    "Skyrim.esm:0008CD00",
+    "Skyrim.esm:00096D0B",
+    "Skyrim.esm:00096D0C",
+    "Skyrim.esm:00096D0D",
+    "Skyrim.esm:000A0367",
+    "Skyrim.esm:000BF742",
+    "Skyrim.esm:000C5EF6",
+    "Skyrim.esm:000C7909",
+    "Skyrim.esm:000D2053",
+    "Skyrim.esm:000D2063",
+    "Skyrim.esm:000D339A",
+    "Skyrim.esm:000D339E",
+    "Skyrim.esm:000ED5FF",
+    "Skyrim.esm:000ED600",
+    "Skyrim.esm:000F1183",
+    "Skyrim.esm:000F52AB",
+    "Skyrim.esm:001034CB",
+    "Skyrim.esm:00103647",
+    "Skyrim.esm:0010EAD9",
+    "Dawnguard.esm:00002ADC",
+    "Dawnguard.esm:00008942",
+    "Dawnguard.esm:0000CFA7",
+    "Dawnguard.esm:0000F4DF",
+    "Dawnguard.esm:00019AAF",
+]
+
