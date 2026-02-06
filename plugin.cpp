@@ -228,6 +228,8 @@ namespace GlowBeGone {
     static bool IsProtectedMagicEffect(RE::EffectSetting* eff) {
         if (!eff) return true;
 
+        if (eff->data.associatedSkill == RE::ActorValue::kConjuration) return true;
+
         using A = RE::EffectSetting::Archetype;
         const auto a = eff->GetArchetype();
 
@@ -241,9 +243,6 @@ namespace GlowBeGone {
             default:
                 break;
         }
-
-        auto* assoc = eff->data.associatedForm;
-        if (assoc && (assoc->Is(RE::FormType::NPC) || assoc->Is(RE::FormType::LeveledNPC))) return true;
 
         return false;
     }
