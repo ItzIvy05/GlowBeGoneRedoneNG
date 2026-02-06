@@ -225,6 +225,29 @@ namespace GlowBeGone {
         return g_settings.exclusionList.find(name) != g_settings.exclusionList.end();
     }
 
+    static bool IsProtectedMagicEffect(RE::EffectSetting* eff) {
+        if (!eff) return true;
+
+        using A = RE::EffectSetting::Archetype;
+        const auto a = eff->GetArchetype();
+
+        switch (a) {
+            case A::kBoundWeapon:
+            case A::kSummonCreature:
+            case A::kCommandSummoned:
+            case A::kReanimate:
+            case A::kSpawnScriptedRef:
+                return true;
+            default:
+                break;
+        }
+
+        auto* assoc = eff->data.associatedForm;
+        if (assoc && (assoc->Is(RE::FormType::NPC) || assoc->Is(RE::FormType::LeveledNPC))) return true;
+
+        return false;
+    }
+
     static void ResolveMagicEffectExclusions() {
         g_settings.magicEffectExcludedRuntime.clear();
 
@@ -244,6 +267,7 @@ namespace GlowBeGone {
 
     static bool IsExcludedMagicEffect(RE::EffectSetting* eff) {
         if (!eff) return true;
+        if (IsProtectedMagicEffect(eff)) return true;
 
         auto id = eff->GetFormID();
         if (g_settings.magicEffectExcludedRuntime.find(id) != g_settings.magicEffectExcludedRuntime.end()) return true;
