@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <fstream>
 #include <string>
 #include <string_view>
@@ -28,6 +29,9 @@ namespace GlowBeGone {
     };
 
     static Settings g_settings;
+
+    static std::unordered_set<RE::FormID> g_protectedShaders;
+    static std::unordered_set<RE::FormID> g_strippedShaders;
 
     static std::string Trim(std::string s) {
         auto is_space = [](unsigned char c) { return std::isspace(c) != 0; };
@@ -225,10 +229,15 @@ namespace GlowBeGone {
         return g_settings.exclusionList.find(name) != g_settings.exclusionList.end();
     }
 
+    static bool IsConjuration(RE::EffectSetting* eff) {
+        if (!eff) return false;
+        return eff->data.associatedSkill == RE::ActorValue::kConjuration;
+    }
+
     static bool IsProtectedMagicEffect(RE::EffectSetting* eff) {
         if (!eff) return true;
 
-        if (eff->data.associatedSkill == RE::ActorValue::kConjuration) return true;
+        if (IsConjuration(eff)) return true;
 
         using A = RE::EffectSetting::Archetype;
         const auto a = eff->GetArchetype();
@@ -243,6 +252,9 @@ namespace GlowBeGone {
             default:
                 break;
         }
+
+        auto* assoc = eff->data.associatedForm;
+        if (assoc && (assoc->Is(RE::FormType::NPC) || assoc->Is(RE::FormType::LeveledNPC))) return true;
 
         return false;
     }
@@ -275,15 +287,56 @@ namespace GlowBeGone {
         return false;
     }
 
+    static void CollectProtectedShaders() {
+        g_protectedShaders.clear();
+
+        auto* dh = RE::TESDataHandler::GetSingleton();
+        if (!dh) return;
+
+        auto& effects = dh->GetFormArray<RE::EffectSetting>();
+        for (auto* eff : effects) {
+            if (!eff) continue;
+
+            if (!IsProtectedMagicEffect(eff)) continue;
+
+            if (eff->data.effectShader) g_protectedShaders.insert(eff->data.effectShader->GetFormID());
+            if (eff->data.enchantShader) g_protectedShaders.insert(eff->data.enchantShader->GetFormID());
+        }
+    }
+
+    static void StripEdgeFromShader(RE::TESEffectShader* shader) {
+        if (!shader) return;
+
+        auto sid = shader->GetFormID();
+        if (g_protectedShaders.find(sid) != g_protectedShaders.end()) return;
+        if (IsExcludedByPlugin(shader)) return;
+
+        if (g_strippedShaders.find(sid) != g_strippedShaders.end()) return;
+        g_strippedShaders.insert(sid);
+
+        shader->data.edgeEffectFallOff = 0.0f;
+        shader->data.edgeEffectColor = RE::Color(0, 0, 0, 0);
+        shader->data.edgeEffectAlphaFadeInTime = 0.0f;
+        shader->data.edgeEffectFullAlphaTime = 0.0f;
+        shader->data.edgeEffectAlphaFadeOutTime = 0.0f;
+        shader->data.edgeEffectPersistentAlphaRatio = 0.0f;
+        shader->data.edgeEffectAlphaPulseAmplitude = 0.0f;
+        shader->data.edgeEffectAlphaPulseFrequency = 0.0f;
+        shader->data.edgeEffectFullAlphaRatio = 0.0f;
+
+        shader->data.edgeWidthAlphaUnits = 0.0f;
+        shader->data.edgeColor = RE::Color(0, 0, 0, 0);
+    }
+
     static void PatchEffectSetting(RE::EffectSetting* eff) {
         if (!eff) return;
 
         if (g_settings.removeActorFX) {
-            eff->data.effectShader = nullptr;
+            StripEdgeFromShader(eff->data.effectShader);
         }
 
         if (g_settings.removeWeaponFX) {
-            eff->data.enchantShader = nullptr;
+            StripEdgeFromShader(eff->data.enchantShader);
         }
     }
 
@@ -302,6 +355,9 @@ namespace GlowBeGone {
     static void OnDataLoaded() {
         LoadConfig();
         ResolveMagicEffectExclusions();
+
+        g_strippedShaders.clear();
+        CollectProtectedShaders();
 
         if (g_settings.removeActorFX || g_settings.removeWeaponFX) {
             PatchAllMagicEffects();
