@@ -30,13 +30,14 @@ namespace GlowBeGone {
 
     static Settings g_settings;
 
-    static std::unordered_set<RE::FormID> g_protectedShaders;
-    static std::unordered_set<RE::FormID> g_strippedShaders;
-
     static std::string Trim(std::string s) {
         auto is_space = [](unsigned char c) { return std::isspace(c) != 0; };
-        while (!s.empty() && is_space(static_cast<unsigned char>(s.front()))) s.erase(s.begin());
-        while (!s.empty() && is_space(static_cast<unsigned char>(s.back()))) s.pop_back();
+        while (!s.empty() && is_space(static_cast<unsigned char>(s.front()))) {
+            s.erase(s.begin());
+        }
+        while (!s.empty() && is_space(static_cast<unsigned char>(s.back()))) {
+            s.pop_back();
+        }
         return s;
     }
 
@@ -48,8 +49,12 @@ namespace GlowBeGone {
 
     static bool ParseBool(std::string_view v, bool fallback) {
         auto s = ToLower(Trim(std::string(v)));
-        if (s == "true") return true;
-        if (s == "false") return false;
+        if (s == "true") {
+            return true;
+        }
+        if (s == "false") {
+            return false;
+        }
         return fallback;
     }
 
@@ -59,7 +64,7 @@ namespace GlowBeGone {
         char quote = 0;
         std::string cur;
 
-        for (size_t i = 0; i < s.size(); i++) {
+        for (std::size_t i = 0; i < s.size(); i++) {
             char c = s[i];
             if (!in_quote) {
                 if (c == '"' || c == '\'') {
@@ -71,7 +76,9 @@ namespace GlowBeGone {
                 if (c == quote) {
                     in_quote = false;
                     auto t = Trim(cur);
-                    if (!t.empty()) out.push_back(t);
+                    if (!t.empty()) {
+                        out.push_back(t);
+                    }
                     cur.clear();
                 } else {
                     cur.push_back(c);
@@ -84,17 +91,27 @@ namespace GlowBeGone {
 
     static bool ParseFileFormPair(const std::string& s, std::string& outFile, std::uint32_t& outLocalFormID) {
         auto t = Trim(s);
-        if (t.empty()) return false;
+        if (t.empty()) {
+            return false;
+        }
 
         auto pos = t.find(':');
-        if (pos == std::string::npos) pos = t.find('|');
-        if (pos == std::string::npos) return false;
+        if (pos == std::string::npos) {
+            pos = t.find('|');
+        }
+        if (pos == std::string::npos) {
+            return false;
+        }
 
         auto file = Trim(t.substr(0, pos));
         auto id = Trim(t.substr(pos + 1));
-        if (file.empty() || id.empty()) return false;
+        if (file.empty() || id.empty()) {
+            return false;
+        }
 
-        if (id.rfind("0x", 0) == 0 || id.rfind("0X", 0) == 0) id = id.substr(2);
+        if (id.rfind("0x", 0) == 0 || id.rfind("0X", 0) == 0) {
+            id = id.substr(2);
+        }
 
         std::uint32_t val = 0;
         try {
@@ -110,7 +127,9 @@ namespace GlowBeGone {
 
     static void LoadConfigFromFile(const char* path) {
         std::ifstream in(path);
-        if (!in.is_open()) return;
+        if (!in.is_open()) {
+            return;
+        }
 
         bool parsingStringArray = false;
         std::string arrayKey;
@@ -121,15 +140,23 @@ namespace GlowBeGone {
             line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
 
             auto pos_hash = line.find('#');
-            if (pos_hash != std::string::npos) line = line.substr(0, pos_hash);
+            if (pos_hash != std::string::npos) {
+                line = line.substr(0, pos_hash);
+            }
             auto pos_slash = line.find("//");
-            if (pos_slash != std::string::npos) line = line.substr(0, pos_slash);
+            if (pos_slash != std::string::npos) {
+                line = line.substr(0, pos_slash);
+            }
 
             line = Trim(line);
-            if (line.empty()) continue;
+            if (line.empty()) {
+                continue;
+            }
 
             if (!parsingStringArray) {
-                if (line.front() == '[' && line.back() == ']') continue;
+                if (line.front() == '[' && line.back() == ']') {
+                    continue;
+                }
             }
 
             if (parsingStringArray) {
@@ -141,7 +168,9 @@ namespace GlowBeGone {
 
                     if (arrayKey == "exclusionlist") {
                         g_settings.exclusionList.clear();
-                        for (auto& it : items) g_settings.exclusionList.insert(ToLower(it));
+                        for (auto& it : items) {
+                            g_settings.exclusionList.insert(ToLower(it));
+                        }
                     } else if (arrayKey == "magiceffectexclusionlist") {
                         g_settings.magicEffectExclusionSpecs.clear();
                         for (auto& it : items) {
@@ -161,7 +190,9 @@ namespace GlowBeGone {
             }
 
             auto eq = line.find('=');
-            if (eq == std::string::npos) continue;
+            if (eq == std::string::npos) {
+                continue;
+            }
 
             auto key = ToLower(Trim(line.substr(0, eq)));
             auto val = Trim(line.substr(eq + 1));
@@ -190,7 +221,9 @@ namespace GlowBeGone {
 
                     if (arrayKey == "exclusionlist") {
                         g_settings.exclusionList.clear();
-                        for (auto& it : items) g_settings.exclusionList.insert(ToLower(it));
+                        for (auto& it : items) {
+                            g_settings.exclusionList.insert(ToLower(it));
+                        }
                     } else if (arrayKey == "magiceffectexclusionlist") {
                         g_settings.magicEffectExclusionSpecs.clear();
                         for (auto& it : items) {
@@ -220,24 +253,34 @@ namespace GlowBeGone {
     }
 
     static bool IsExcludedByPlugin(RE::TESForm* form) {
-        if (!form || g_settings.exclusionList.empty()) return false;
+        if (!form || g_settings.exclusionList.empty()) {
+            return false;
+        }
 
         auto* file = form->GetFile(0);
-        if (!file) return false;
+        if (!file) {
+            return false;
+        }
 
         auto name = ToLower(std::string(file->GetFilename()));
         return g_settings.exclusionList.find(name) != g_settings.exclusionList.end();
     }
 
     static bool IsConjuration(RE::EffectSetting* eff) {
-        if (!eff) return false;
+        if (!eff) {
+            return false;
+        }
         return eff->data.associatedSkill == RE::ActorValue::kConjuration;
     }
 
     static bool IsProtectedMagicEffect(RE::EffectSetting* eff) {
-        if (!eff) return true;
+        if (!eff) {
+            return true;
+        }
 
-        if (IsConjuration(eff)) return true;
+        if (IsConjuration(eff)) {
+            return true;
+        }
 
         using A = RE::EffectSetting::Archetype;
         const auto a = eff->GetArchetype();
@@ -254,7 +297,9 @@ namespace GlowBeGone {
         }
 
         auto* assoc = eff->data.associatedForm;
-        if (assoc && (assoc->Is(RE::FormType::NPC) || assoc->Is(RE::FormType::LeveledNPC))) return true;
+        if (assoc && (assoc->Is(RE::FormType::NPC) || assoc->Is(RE::FormType::LeveledNPC))) {
+            return true;
+        }
 
         return false;
     }
@@ -263,91 +308,72 @@ namespace GlowBeGone {
         g_settings.magicEffectExcludedRuntime.clear();
 
         auto* dh = RE::TESDataHandler::GetSingleton();
-        if (!dh) return;
+        if (!dh) {
+            return;
+        }
 
         for (auto& [file, localID] : g_settings.magicEffectExclusionSpecs) {
             auto* form = dh->LookupForm(localID, file);
-            if (!form) continue;
+            if (!form) {
+                continue;
+            }
 
             auto* eff = form->As<RE::EffectSetting>();
-            if (!eff) continue;
+            if (!eff) {
+                continue;
+            }
 
             g_settings.magicEffectExcludedRuntime.insert(eff->GetFormID());
         }
     }
 
     static bool IsExcludedMagicEffect(RE::EffectSetting* eff) {
-        if (!eff) return true;
-        if (IsProtectedMagicEffect(eff)) return true;
+        if (!eff) {
+            return true;
+        }
+        if (IsProtectedMagicEffect(eff)) {
+            return true;
+        }
 
         auto id = eff->GetFormID();
-        if (g_settings.magicEffectExcludedRuntime.find(id) != g_settings.magicEffectExcludedRuntime.end()) return true;
-        if (IsExcludedByPlugin(eff)) return true;
+        if (g_settings.magicEffectExcludedRuntime.find(id) != g_settings.magicEffectExcludedRuntime.end()) {
+            return true;
+        }
+        if (IsExcludedByPlugin(eff)) {
+            return true;
+        }
 
         return false;
     }
 
-    static void CollectProtectedShaders() {
-        g_protectedShaders.clear();
-
-        auto* dh = RE::TESDataHandler::GetSingleton();
-        if (!dh) return;
-
-        auto& effects = dh->GetFormArray<RE::EffectSetting>();
-        for (auto* eff : effects) {
-            if (!eff) continue;
-
-            if (!IsProtectedMagicEffect(eff)) continue;
-
-            if (eff->data.effectShader) g_protectedShaders.insert(eff->data.effectShader->GetFormID());
-            if (eff->data.enchantShader) g_protectedShaders.insert(eff->data.enchantShader->GetFormID());
-        }
-    }
-
-    static void StripEdgeFromShader(RE::TESEffectShader* shader) {
-        if (!shader) return;
-
-        auto sid = shader->GetFormID();
-        if (g_protectedShaders.find(sid) != g_protectedShaders.end()) return;
-        if (IsExcludedByPlugin(shader)) return;
-
-        if (g_strippedShaders.find(sid) != g_strippedShaders.end()) return;
-        g_strippedShaders.insert(sid);
-
-        shader->data.edgeEffectFallOff = 0.0f;
-        shader->data.edgeEffectColor = RE::Color(0, 0, 0, 0);
-        shader->data.edgeEffectAlphaFadeInTime = 0.0f;
-        shader->data.edgeEffectFullAlphaTime = 0.0f;
-        shader->data.edgeEffectAlphaFadeOutTime = 0.0f;
-        shader->data.edgeEffectPersistentAlphaRatio = 0.0f;
-        shader->data.edgeEffectAlphaPulseAmplitude = 0.0f;
-        shader->data.edgeEffectAlphaPulseFrequency = 0.0f;
-        shader->data.edgeEffectFullAlphaRatio = 0.0f;
-
-        shader->data.edgeWidthAlphaUnits = 0.0f;
-        shader->data.edgeColor = RE::Color(0, 0, 0, 0);
-    }
-
     static void PatchEffectSetting(RE::EffectSetting* eff) {
-        if (!eff) return;
+        if (!eff) {
+            return;
+        }
 
         if (g_settings.removeActorFX) {
-            StripEdgeFromShader(eff->data.effectShader);
+            eff->data.effectShader = nullptr;
         }
 
         if (g_settings.removeWeaponFX) {
-            StripEdgeFromShader(eff->data.enchantShader);
+            eff->data.enchantShader = nullptr;
         }
     }
 
     static void PatchAllMagicEffects() {
         auto* dh = RE::TESDataHandler::GetSingleton();
-        if (!dh) return;
+        if (!dh) {
+            return;
+        }
 
         auto& effects = dh->GetFormArray<RE::EffectSetting>();
         for (auto* eff : effects) {
-            if (!eff) continue;
-            if (IsExcludedMagicEffect(eff)) continue;
+            if (!eff) {
+                continue;
+            }
+            if (IsExcludedMagicEffect(eff)) {
+                continue;
+            }
             PatchEffectSetting(eff);
         }
     }
@@ -356,16 +382,15 @@ namespace GlowBeGone {
         LoadConfig();
         ResolveMagicEffectExclusions();
 
-        g_strippedShaders.clear();
-        CollectProtectedShaders();
-
         if (g_settings.removeActorFX || g_settings.removeWeaponFX) {
             PatchAllMagicEffects();
         }
     }
 
     static void OnMessage(SKSE::MessagingInterface::Message* msg) {
-        if (!msg) return;
+        if (!msg) {
+            return;
+        }
 
         if (msg->type == SKSE::MessagingInterface::kDataLoaded) {
             OnDataLoaded();
@@ -377,7 +402,9 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
     SKSE::Init(a_skse);
 
     auto* messaging = SKSE::GetMessagingInterface();
-    if (!messaging) return false;
+    if (!messaging) {
+        return false;
+    }
 
     messaging->RegisterListener(GlowBeGone::OnMessage);
     return true;
