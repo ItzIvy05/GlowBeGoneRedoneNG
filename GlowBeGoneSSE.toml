@@ -1,6 +1,7 @@
 [FX]
 RemoveActorFX = true
 RemoveWeaponFX = true
+RemoveEffectLights = true
 
 [Exclusion]
 ExclusionList = [
@@ -47,10 +48,20 @@ MagicEffectExclusionList = [
     "Skyrim.esm:001034CB",
     "Skyrim.esm:00103647",
     "Skyrim.esm:0010EAD9",
+    "Skyrim.esm:000cee00",
+    "Skyrim.esm:000cedff",
+    "Skyrim.esm:000b79e7",
+    "Skyrim.esm:0001ea74",
+    "Skyrim.esm:000e826a",
+    "Skyrim.esm:000e8269",
+    "Skyrim.esm:000b79e8",
+    "Skyrim.esm:0001ea75",
+    "Skyrim.esm:0010319E",
+    "Skyrim.esm:0008AFCB",
+    "Skyrim.esm:000B8F30",
     "Dawnguard.esm:00002ADC",
     "Dawnguard.esm:00008942",
     "Dawnguard.esm:0000CFA7",
     "Dawnguard.esm:0000F4DF",
     "Dawnguard.esm:00019AAF",
 ]
-
