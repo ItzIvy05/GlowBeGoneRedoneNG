@@ -47,6 +47,15 @@ namespace GlowBeGone {
         return s;
     }
 
+    static std::string NormalizePluginName(std::string s) {
+        s = Trim(std::move(s));
+        auto slash = s.find_last_of("\\/");
+        if (slash != std::string::npos) {
+            s = s.substr(slash + 1);
+        }
+        return ToLower(std::move(s));
+    }
+
     static bool ParseBool(std::string_view v, bool fallback) {
         auto s = ToLower(Trim(std::string(v)));
         if (s == "true") {
@@ -169,7 +178,7 @@ namespace GlowBeGone {
                     if (arrayKey == "exclusionlist") {
                         g_settings.exclusionList.clear();
                         for (auto& it : items) {
-                            g_settings.exclusionList.insert(ToLower(it));
+                            g_settings.exclusionList.insert(NormalizePluginName(it));
                         }
                     } else if (arrayKey == "magiceffectexclusionlist") {
                         g_settings.magicEffectExclusionSpecs.clear();
@@ -222,7 +231,7 @@ namespace GlowBeGone {
                     if (arrayKey == "exclusionlist") {
                         g_settings.exclusionList.clear();
                         for (auto& it : items) {
-                            g_settings.exclusionList.insert(ToLower(it));
+                            g_settings.exclusionList.insert(NormalizePluginName(it));
                         }
                     } else if (arrayKey == "magiceffectexclusionlist") {
                         g_settings.magicEffectExclusionSpecs.clear();
@@ -252,18 +261,53 @@ namespace GlowBeGone {
         LoadConfigFromFile("Data/SKSE/Plugins/GlowBeGoneSSE.toml");
     }
 
+    static void CollectFormFiles(RE::TESForm* form, std::vector<const RE::TESFile*>& out) {
+        out.clear();
+        if (!form) {
+            return;
+        }
+
+        if (auto* f = form->GetFile(); f) {
+            out.push_back(f);
+        }
+
+        for (std::uint32_t i = 0; i < 8; i++) {
+            auto* f = form->GetFile(i);
+            if (!f) {
+                break;
+            }
+            if (std::find(out.begin(), out.end(), f) == out.end()) {
+                out.push_back(f);
+            }
+        }
+    }
+
     static bool IsExcludedByPlugin(RE::TESForm* form) {
         if (!form || g_settings.exclusionList.empty()) {
             return false;
         }
 
-        auto* file = form->GetFile(0);
-        if (!file) {
-            return false;
+        std::vector<const RE::TESFile*> files;
+        CollectFormFiles(form, files);
+
+        for (auto* f : files) {
+            if (!f) {
+                continue;
+            }
+
+            std::string name;
+            if constexpr (requires { f->fileName; }) {
+                name = NormalizePluginName(std::string(f->fileName));
+            } else {
+                name = NormalizePluginName(std::string(f->GetFilename()));
+            }
+
+            if (g_settings.exclusionList.find(name) != g_settings.exclusionList.end()) {
+                return true;
+            }
         }
 
-        auto name = ToLower(std::string(file->GetFilename()));
-        return g_settings.exclusionList.find(name) != g_settings.exclusionList.end();
+        return false;
     }
 
     static bool IsConjuration(RE::EffectSetting* eff) {
