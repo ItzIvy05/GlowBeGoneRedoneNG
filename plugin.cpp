@@ -23,9 +23,13 @@ namespace GlowBeGone {
     struct Settings {
         bool removeActorFX{true};
         bool removeWeaponFX{true};
+        bool removeOnlyListed{false};
         std::unordered_set<std::string> exclusionList;
         std::vector<std::pair<std::string, std::uint32_t>> magicEffectExclusionSpecs;
         std::unordered_set<RE::FormID> magicEffectExcludedRuntime;
+        std::unordered_set<std::string> removalList;
+        std::vector<std::pair<std::string, std::uint32_t>> magicEffectRemovalSpecs;
+        std::unordered_set<RE::FormID> magicEffectRemovalRuntime;
     };
 
     static Settings g_settings;
@@ -134,6 +138,59 @@ namespace GlowBeGone {
         return true;
     }
 
+    struct ArrayTarget {
+        std::unordered_set<std::string>* plugins{nullptr};
+        std::vector<std::pair<std::string, std::uint32_t>>* specs{nullptr};
+    };
+
+    static ArrayTarget ResolveArrayTarget(const std::string& key) {
+        if (key == "exclusionlist") {
+            return {&g_settings.exclusionList, nullptr};
+        }
+        if (key == "removallist") {
+            return {&g_settings.removalList, nullptr};
+        }
+        if (key == "magiceffectexclusionlist") {
+            return {nullptr, &g_settings.magicEffectExclusionSpecs};
+        }
+        if (key == "magiceffectremovallist") {
+            return {nullptr, &g_settings.magicEffectRemovalSpecs};
+        }
+        return {};
+    }
+
+    static bool IsArrayKey(const std::string& key) {
+        auto target = ResolveArrayTarget(key);
+        return target.plugins != nullptr || target.specs != nullptr;
+    }
+
+    static void ApplyStringArray(const std::string& key, const std::string& buf) {
+        auto target = ResolveArrayTarget(key);
+
+        auto items = ExtractQuotedStrings(buf);
+
+        if (target.plugins) {
+            target.plugins->clear();
+            for (auto& it : items) {
+                target.plugins->insert(NormalizePluginName(it));
+            }
+            return;
+        }
+
+        if (!target.specs) {
+            return;
+        }
+
+        target.specs->clear();
+        for (auto& it : items) {
+            std::string file;
+            std::uint32_t localID = 0;
+            if (ParseFileFormPair(it, file, localID)) {
+                target.specs->emplace_back(file, localID);
+            }
+        }
+    }
+
     static void LoadConfigFromFile(const char* path) {
         std::ifstream in(path);
         if (!in.is_open()) {
@@ -173,23 +230,7 @@ namespace GlowBeGone {
                 arrayBuf += line;
 
                 if (line.find(']') != std::string::npos) {
-                    auto items = ExtractQuotedStrings(arrayBuf);
-
-                    if (arrayKey == "exclusionlist") {
-                        g_settings.exclusionList.clear();
-                        for (auto& it : items) {
-                            g_settings.exclusionList.insert(NormalizePluginName(it));
-                        }
-                    } else if (arrayKey == "magiceffectexclusionlist") {
-                        g_settings.magicEffectExclusionSpecs.clear();
-                        for (auto& it : items) {
-                            std::string file;
-                            std::uint32_t localID = 0;
-                            if (ParseFileFormPair(it, file, localID)) {
-                                g_settings.magicEffectExclusionSpecs.emplace_back(file, localID);
-                            }
-                        }
-                    }
+                    ApplyStringArray(arrayKey, arrayBuf);
 
                     parsingStringArray = false;
                     arrayKey.clear();
@@ -216,7 +257,12 @@ namespace GlowBeGone {
                 continue;
             }
 
-            if (key == "exclusionlist" || key == "magiceffectexclusionlist") {
+            if (key == "removeonlylisted") {
+                g_settings.removeOnlyListed = ParseBool(val, g_settings.removeOnlyListed);
+                continue;
+            }
+
+            if (IsArrayKey(key)) {
                 arrayKey = key;
                 arrayBuf = val;
 
@@ -226,23 +272,7 @@ namespace GlowBeGone {
                 }
 
                 if (val.find(']') != std::string::npos) {
-                    auto items = ExtractQuotedStrings(arrayBuf);
-
-                    if (arrayKey == "exclusionlist") {
-                        g_settings.exclusionList.clear();
-                        for (auto& it : items) {
-                            g_settings.exclusionList.insert(NormalizePluginName(it));
-                        }
-                    } else if (arrayKey == "magiceffectexclusionlist") {
-                        g_settings.magicEffectExclusionSpecs.clear();
-                        for (auto& it : items) {
-                            std::string file;
-                            std::uint32_t localID = 0;
-                            if (ParseFileFormPair(it, file, localID)) {
-                                g_settings.magicEffectExclusionSpecs.emplace_back(file, localID);
-                            }
-                        }
-                    }
+                    ApplyStringArray(arrayKey, arrayBuf);
 
                     arrayKey.clear();
                     arrayBuf.clear();
@@ -267,23 +297,21 @@ namespace GlowBeGone {
             return;
         }
 
-        if (auto* f = form->GetFile(); f) {
-            out.push_back(f);
+        auto* array = form->sourceFiles.array;
+        if (!array) {
+            return;
         }
 
-        for (std::uint32_t i = 0; i < 8; i++) {
-            auto* f = form->GetFile(i);
-            if (!f) {
-                break;
-            }
-            if (std::find(out.begin(), out.end(), f) == out.end()) {
+        out.reserve(array->size());
+        for (auto* f : *array) {
+            if (f && std::find(out.begin(), out.end(), f) == out.end()) {
                 out.push_back(f);
             }
         }
     }
 
-    static bool IsExcludedByPlugin(RE::TESForm* form) {
-        if (!form || g_settings.exclusionList.empty()) {
+    static bool IsFormFromListedPlugin(RE::TESForm* form, const std::unordered_set<std::string>& plugins) {
+        if (!form || plugins.empty()) {
             return false;
         }
 
@@ -295,19 +323,18 @@ namespace GlowBeGone {
                 continue;
             }
 
-            std::string name;
-            if constexpr (requires { f->fileName; }) {
-                name = NormalizePluginName(std::string(f->fileName));
-            } else {
-                name = NormalizePluginName(std::string(f->GetFilename()));
-            }
+            auto name = NormalizePluginName(std::string(f->GetFilename()));
 
-            if (g_settings.exclusionList.find(name) != g_settings.exclusionList.end()) {
+            if (plugins.find(name) != plugins.end()) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    static bool IsExcludedByPlugin(RE::TESForm* form) {
+        return IsFormFromListedPlugin(form, g_settings.exclusionList);
     }
 
     static bool IsConjuration(RE::EffectSetting* eff) {
@@ -335,6 +362,9 @@ namespace GlowBeGone {
             case A::kCommandSummoned:
             case A::kReanimate:
             case A::kSpawnScriptedRef:
+            case A::kEtherealize:
+            case A::kInvisibility:
+            case A::kDetectLife:
                 return true;
             default:
                 break;
@@ -348,46 +378,39 @@ namespace GlowBeGone {
         return false;
     }
 
-    static void ResolveMagicEffectExclusions() {
-        g_settings.magicEffectExcludedRuntime.clear();
+    static void ResolveMagicEffectSpecs(const std::vector<std::pair<std::string, std::uint32_t>>& specs,
+                                        std::unordered_set<RE::FormID>& out) {
+        out.clear();
 
         auto* dh = RE::TESDataHandler::GetSingleton();
         if (!dh) {
             return;
         }
 
-        for (auto& [file, localID] : g_settings.magicEffectExclusionSpecs) {
-            auto* form = dh->LookupForm(localID, file);
-            if (!form) {
+        for (auto& [file, rawID] : specs) {
+            auto* mod = dh->LookupModByName(file);
+            if (!mod) {
                 continue;
             }
 
-            auto* eff = form->As<RE::EffectSetting>();
+            const RE::FormID localID = mod->IsLight() ? (rawID & 0xFFF) : (rawID & 0xFFFFFF);
+
+            auto* eff = dh->LookupForm<RE::EffectSetting>(localID, file);
             if (!eff) {
                 continue;
             }
 
-            g_settings.magicEffectExcludedRuntime.insert(eff->GetFormID());
+            out.insert(eff->GetFormID());
         }
     }
 
-    static bool IsExcludedMagicEffect(RE::EffectSetting* eff) {
+    static bool IsEffectExcluded(RE::EffectSetting* eff) {
         if (!eff) {
-            return true;
-        }
-        if (IsProtectedMagicEffect(eff)) {
-            return true;
+            return false;
         }
 
-        auto id = eff->GetFormID();
-        if (g_settings.magicEffectExcludedRuntime.find(id) != g_settings.magicEffectExcludedRuntime.end()) {
-            return true;
-        }
-        if (IsExcludedByPlugin(eff)) {
-            return true;
-        }
-
-        return false;
+        return g_settings.magicEffectExcludedRuntime.find(eff->GetFormID()) !=
+               g_settings.magicEffectExcludedRuntime.end();
     }
 
     static void PatchEffectSetting(RE::EffectSetting* eff) {
@@ -404,6 +427,43 @@ namespace GlowBeGone {
         }
     }
 
+    static bool IsEffectListedForRemoval(RE::EffectSetting* eff) {
+        if (!eff) {
+            return false;
+        }
+
+        return g_settings.magicEffectRemovalRuntime.find(eff->GetFormID()) !=
+               g_settings.magicEffectRemovalRuntime.end();
+    }
+
+    static bool ShouldRemoveFX(RE::EffectSetting* eff) {
+        if (!eff) {
+            return false;
+        }
+
+        if (IsEffectListedForRemoval(eff)) {
+            return true;
+        }
+
+        if (IsEffectExcluded(eff)) {
+            return false;
+        }
+
+        if (IsProtectedMagicEffect(eff)) {
+            return false;
+        }
+
+        if (IsFormFromListedPlugin(eff, g_settings.removalList)) {
+            return true;
+        }
+
+        if (g_settings.removeOnlyListed) {
+            return false;
+        }
+
+        return !IsExcludedByPlugin(eff);
+    }
+
     static void PatchAllMagicEffects() {
         auto* dh = RE::TESDataHandler::GetSingleton();
         if (!dh) {
@@ -412,19 +472,16 @@ namespace GlowBeGone {
 
         auto& effects = dh->GetFormArray<RE::EffectSetting>();
         for (auto* eff : effects) {
-            if (!eff) {
-                continue;
+            if (ShouldRemoveFX(eff)) {
+                PatchEffectSetting(eff);
             }
-            if (IsExcludedMagicEffect(eff)) {
-                continue;
-            }
-            PatchEffectSetting(eff);
         }
     }
 
     static void OnDataLoaded() {
         LoadConfig();
-        ResolveMagicEffectExclusions();
+        ResolveMagicEffectSpecs(g_settings.magicEffectExclusionSpecs, g_settings.magicEffectExcludedRuntime);
+        ResolveMagicEffectSpecs(g_settings.magicEffectRemovalSpecs, g_settings.magicEffectRemovalRuntime);
 
         if (g_settings.removeActorFX || g_settings.removeWeaponFX) {
             PatchAllMagicEffects();

@@ -1,7 +1,19 @@
 [FX]
 RemoveActorFX = true
 RemoveWeaponFX = true
-RemoveEffectLights = true
+
+# true = strip nothing at all except what you put in [Removal]
+RemoveOnlyListed = false
+[Removal]
+# Strips everything from these plugins. Protections and exclusions still win.
+RemovalList = [
+    # Add your beloved plugin names below and separate by (,)comma, surrounded by (")double quotation marks.
+]
+
+# Strips these exact effects. Overrides protections and exclusions.
+MagicEffectRemovalList = [
+    # Add your beloved plugin names below and separate by (,)comma, surrounded by (")double quotation marks.
+]
 
 [Exclusion]
 ExclusionList = [
@@ -11,57 +23,60 @@ ExclusionList = [
     "FleshFX.esp",
     "Frostfall.esp",
     "RASS - Visual Effects.esl",
-    "For Honor in Skyrim.esp",        
+    "For Honor in Skyrim.esp",
     "WetandCold.esp",
     # Add your beloved plugin names below and separate by (,)comma, surrounded by (")double quotation marks.
 ]
 
 [MagicEffects]
+# Use the local form id, not the one xEdit shows with the load order prefix on it.
 MagicEffectExclusionList = [
-    "Skyrim.esm:00016B4B",
-    "Skyrim.esm:00016C0F",
-    "Skyrim.esm:00016C3B",
-    "Skyrim.esm:00016C3D",
-    "Skyrim.esm:0001A1EF",
-    "Skyrim.esm:0005D30E",
-    "Skyrim.esm:00065BD6",
-    "Skyrim.esm:0006A154",
-    "Skyrim.esm:0006A156",
-    "Skyrim.esm:00072313",
-    "Skyrim.esm:0007E8E0",
-    "Skyrim.esm:0008CD00",
-    "Skyrim.esm:00096D0B",
-    "Skyrim.esm:00096D0C",
-    "Skyrim.esm:00096D0D",
-    "Skyrim.esm:000A0367",
-    "Skyrim.esm:000BF742",
-    "Skyrim.esm:000C5EF6",
-    "Skyrim.esm:000C7909",
-    "Skyrim.esm:000D2053",
-    "Skyrim.esm:000D2063",
-    "Skyrim.esm:000D339A",
-    "Skyrim.esm:000D339E",
-    "Skyrim.esm:000ED5FF",
-    "Skyrim.esm:000ED600",
-    "Skyrim.esm:000F1183",
-    "Skyrim.esm:000F52AB",
-    "Skyrim.esm:001034CB",
-    "Skyrim.esm:00103647",
-    "Skyrim.esm:0010EAD9",
-    "Skyrim.esm:000cee00",
-    "Skyrim.esm:000cedff",
-    "Skyrim.esm:000b79e7",
-    "Skyrim.esm:0001ea74",
-    "Skyrim.esm:000e826a",
-    "Skyrim.esm:000e8269",
-    "Skyrim.esm:000b79e8",
-    "Skyrim.esm:0001ea75",
-    "Skyrim.esm:0010319E",
-    "Skyrim.esm:0008AFCB",
-    "Skyrim.esm:000B8F30",
-    "Dawnguard.esm:00002ADC",
-    "Dawnguard.esm:00008942",
-    "Dawnguard.esm:0000CFA7",
-    "Dawnguard.esm:0000F4DF",
-    "Dawnguard.esm:00019AAF",
+    "Skyrim.esm:00016B4B",  # ReanimateFFTargetActor0
+    "Skyrim.esm:00016C0F",  # ReanimateFFTargetActor25
+    "Skyrim.esm:00016C3B",  # ReanimateFFTargetActor50
+    "Skyrim.esm:00016C3D",  # ReanimateFFTargetActor75
+    "Skyrim.esm:0001A1EF",  # AbFXCallOfValorHeroEffect
+    "Skyrim.esm:0001EA74",  # DetectLifeFriendInteriorConcSelf
+    "Skyrim.esm:0001EA75",  # DetectUndeadEnemyInteriorConcSelf
+    "Skyrim.esm:0005030E",  # AbGhost
+    "Skyrim.esm:00065BD6",  # ReanimateFFAimed0
+    "Skyrim.esm:0006A154",  # MGRSummonArnielEffect
+    "Skyrim.esm:0006A156",  # MGAbGhost
+    "Skyrim.esm:00072313",  # AbPhantom
+    "Skyrim.esm:0007E8E0",  # ReanimateThrallFFAimed
+    "Skyrim.esm:0008AFCB",  # VoiceAuraWhisperInterior
+    "Skyrim.esm:00096D0B",  # ReanimateFFAimed25
+    "Skyrim.esm:00096D0C",  # ReanimateFFAimed50
+    "Skyrim.esm:00096D0D",  # ReanimateFFAimed75
+    "Skyrim.esm:000A0367",  # DBSpectralAssassinEffect
+    "Skyrim.esm:000B79E7",  # DetectLifeFriendExteriorConcSelf
+    "Skyrim.esm:000B79E8",  # DetectUndeadEnemyExteriorConcSelf
+    "Skyrim.esm:000B8F30",  # PowerDarkElfFireCloakFFSelf
+    "Skyrim.esm:000BF742",  # AbNightmare
+    "Skyrim.esm:000C5EF6",  # AbGhostNightingale
+    "Skyrim.esm:000C7909",  # AbGhostNightingaleCorrupt
+    "Skyrim.esm:000CEDFF",  # DetectLifeEnemyExteriorConcSelf
+    "Skyrim.esm:000CEE00",  # DetectLifeEnemyInteriorConcSelf
+    "Skyrim.esm:000D2053",  # AbGhostNew
+    "Skyrim.esm:000D2063",  # AbGhostFire
+    "Skyrim.esm:000D339A",  # AbGhostFrost
+    "Skyrim.esm:000D339E",  # AbGhostStorm
+    "Skyrim.esm:000E8269",  # DetectUndeadFriendExteriorConcSelf
+    "Skyrim.esm:000E826A",  # DetectUndeadFriendInteriorConcSelf
+    "Skyrim.esm:000ED5F2",  # AbFamiliarVisuals
+    "Skyrim.esm:000ED5FF",  # dunSaarthalFlameFX
+    "Skyrim.esm:000ED600",  # dunSaarthalFrostFX
+    "Skyrim.esm:000F1183",  # AbWispShadeScriptAttach
+    "Skyrim.esm:000F52AB",  # ReanimateSecondayFFAimed
+    "Skyrim.esm:0010319E",  # VoiceAuraWhisperExterior
+    "Skyrim.esm:001034CB",  # AbGhosttViolet
+    "Skyrim.esm:00103647",  # AbGhostPotionEffect
+    "Skyrim.esm:0010EAD9",  # ReanimateSecondayTargetActor
+    "Skyrim.esm:0010F5A6",  # AbOnFire
+    "Dawnguard.esm:00002ADC",  # AbDLC1SoulWispScriptAttach
+    "Dawnguard.esm:00008942",  # DLC1SoulCairnAbFXKeeperHead
+    "Dawnguard.esm:0000939E",  # DLC01AbSoul
+    "Dawnguard.esm:0000CFA7",  # DLC1LD_GhostAbilityFX
+    "Dawnguard.esm:0000F4DF",  # DLC1dunHarkonBattleReanimateFX
+    "Dawnguard.esm:00019AAF",  # DLC1SoulCairnAbGhost
 ]
